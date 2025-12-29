@@ -1,9 +1,6 @@
 import os
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    KeyboardButton
-)
+import re
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
@@ -12,94 +9,152 @@ from telegram.ext import (
     filters
 )
 
-# ====== TOKEN ======
+# ===== TOKEN =====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    raise RuntimeError("❌ BOT_TOKEN не встановлений")
+    raise RuntimeError("BOT_TOKEN не встановлений")
 
-# ====== КНОПКИ ======
+# ===== KEYBOARD =====
 keyboard = ReplyKeyboardMarkup(
     [
-        [KeyboardButton("🔐 Перевірити пароль"), KeyboardButton("🔗 Перевірити посилання")],
-        [KeyboardButton("🎲 Згенерувати пароль"), KeyboardButton("🛡 Поради з безпеки")],
-        [KeyboardButton("ℹ️ Про бота"), KeyboardButton("🆘 Допомога")],
-        [KeyboardButton("💡 Пропозиції")]
+        ["🔐 Перевірити пароль", "🔗 Перевірити посилання"],
+        ["🎲 Згенерувати пароль", "🛡 Поради з безпеки"],
+        ["ℹ️ Про бота", "🆘 Допомога"],
+        ["💡 Пропозиції"]
     ],
     resize_keyboard=True
 )
 
-# ====== /start ======
+# ===== START =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
     await update.message.reply_text(
         "👋 Вітаю!\n\n"
-        "Я бот для безпеки 🔐\n"
-        "Користуйся кнопками нижче ⬇️",
+        "Я бот з кібербезпеки 🔐\n"
+        "Можеш писати або користуватись кнопками ⬇️",
         reply_markup=keyboard
     )
 
-# ====== КНОПКИ ======
+# ===== BUTTON HANDLERS =====
 async def check_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    context.user_data["mode"] = "password"
     await update.message.reply_text(
         "🔐 Перевірка пароля\n\n"
         "❗ Не надсилай реальні паролі\n"
-        "Напиши приклад структури (типу Abc123!)"
+        "Напиши приклад (типу Abc123!)"
     )
 
 async def check_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    context.user_data["mode"] = "link"
     await update.message.reply_text(
         "🔗 Перевірка посилання\n\n"
-        "Надішли лінк, і я скажу, чи він підозрілий"
+        "Надішли URL для перевірки"
     )
 
 async def generate_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
     await update.message.reply_text(
         "🎲 Згенерований пароль:\n\n"
         "`F8#qL!2xP@9A`",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
+        reply_markup=keyboard
     )
 
 async def tips(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
     await update.message.reply_text(
         "🛡 Поради з безпеки:\n\n"
-        "• Використовуй різні паролі\n"
-        "• 2FA обовʼязково\n"
-        "• Не переходь за підозрілими лінками"
+        "• Різні паролі\n"
+        "• 2FA\n"
+        "• Не відкривай підозрілі лінки",
+        reply_markup=keyboard
     )
 
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
     await update.message.reply_text(
         "ℹ️ Про бота\n\n"
-        "Цей бот створений для допомоги з кібербезпекою 🔐"
+        "Бот допомагає з базовою кібербезпекою 🔐",
+        reply_markup=keyboard
     )
 
 async def help_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
     await update.message.reply_text(
         "🆘 Допомога\n\n"
-        "Просто обери потрібну кнопку ⬇️"
+        "Обери кнопку або напиши текст",
+        reply_markup=keyboard
     )
 
 async def suggestions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["waiting_suggestion"] = True
+    context.user_data.clear()
+    context.user_data["mode"] = "suggestion"
     await update.message.reply_text(
-        "💡 Напиши свою пропозицію для покращення бота 👇"
+        "💡 Напиши свою пропозицію 👇"
     )
 
-# ====== ТЕКСТ ======
+# ===== TEXT HANDLER =====
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get("waiting_suggestion"):
-        context.user_data["waiting_suggestion"] = False
+    text = update.message.text
+    mode = context.user_data.get("mode")
+
+    # --- PASSWORD CHECK ---
+    if mode == "password":
+        context.user_data.clear()
+
+        strength = 0
+        if len(text) >= 8: strength += 1
+        if re.search(r"[A-Z]", text): strength += 1
+        if re.search(r"[a-z]", text): strength += 1
+        if re.search(r"[0-9]", text): strength += 1
+        if re.search(r"[!@#$%^&*]", text): strength += 1
+
+        if strength <= 2:
+            result = "🔴 Слабкий пароль"
+        elif strength <= 4:
+            result = "🟡 Середній пароль"
+        else:
+            result = "🟢 Надійний пароль"
+
+        await update.message.reply_text(
+            f"🔐 Результат:\n{result}",
+            reply_markup=keyboard
+        )
+        return
+
+    # --- LINK CHECK ---
+    if mode == "link":
+        context.user_data.clear()
+        if text.startswith("http"):
+            await update.message.reply_text(
+                "🔍 Посилання виглядає коректно\n(це не гарантія безпеки)",
+                reply_markup=keyboard
+            )
+        else:
+            await update.message.reply_text(
+                "❌ Це не схоже на посилання",
+                reply_markup=keyboard
+            )
+        return
+
+    # --- SUGGESTION ---
+    if mode == "suggestion":
+        context.user_data.clear()
         await update.message.reply_text(
             "✅ Дякую! Пропозицію збережено 🙌",
             reply_markup=keyboard
         )
         return
 
+    # --- DEFAULT ---
     await update.message.reply_text(
-        "ℹ️ Користуйся кнопками знизу ⬇️",
+        "ℹ️ Обери дію кнопками знизу ⬇️",
         reply_markup=keyboard
     )
 
-# ====== MAIN ======
+# ===== MAIN =====
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -115,7 +170,6 @@ def main():
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    print("✅ Bot started")
     app.run_polling()
 
 if __name__ == "__main__":
