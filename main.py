@@ -1,10 +1,6 @@
 import os
 import logging
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-)
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -13,120 +9,127 @@ from telegram.ext import (
     filters,
 )
 
-# ================== НАЛАШТУВАННЯ ==================
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("8596592294:AAHvoj-GVwfToT103XWOcvMMUoqE2DrkflU")
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+logging.basicConfig(level=logging.INFO)
 
-# ================== КНОПКИ ==================
-main_keyboard = ReplyKeyboardMarkup(
+# ====== КНОПКИ ======
+keyboard = ReplyKeyboardMarkup(
     [
-        [KeyboardButton("🔐 Перевірити пароль"), KeyboardButton("🔗 Перевірити посилання")],
-        [KeyboardButton("🎲 Згенерувати пароль"), KeyboardButton("🛡 Поради з безпеки")],
-        [KeyboardButton("ℹ️ Про бота"), KeyboardButton("🆘 Допомога")],
+        ["🔐 Перевірити пароль", "🔗 Перевірити посилання"],
+        ["🎲 Згенерувати пароль", "🛡 Поради з безпеки"],
+        ["ℹ️ Про бота", "🆘 Допомога"],
     ],
     resize_keyboard=True,
 )
 
-# ================== КОМАНДИ ==================
+waiting_for_problem = set()
+
+# ====== START ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Привіт!\n\n"
+        "👋 Привіт!\n"
         "Я допоможу тобі з питаннями кібербезпеки 🔐\n"
         "Обери дію з меню нижче 👇",
-        reply_markup=main_keyboard,
+        reply_markup=keyboard,
     )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "/start — Запуск бота\n"
-        "/password — Перевірка надійності пароля\n"
-        "/link — Перевірка посилання\n"
-        "/generate — Генерація пароля\n"
-        "/tips — Поради з безпеки\n"
-        "/about — Про бота\n"
-        "/helpme — Допомога від спеціаліста"
-    )
-
-async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "ℹ️ Це бот з кібербезпеки.\n"
-        "Він допоможе уникнути шахрайства та створити надійні паролі."
-    )
-
-async def tips(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🛡 Поради з безпеки:\n"
-        "• Не переходь за підозрілими посиланнями\n"
-        "• Використовуй складні паролі\n"
-        "• Не передавай коди нікому"
-    )
-
-async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🎲 Приклад надійного пароля:\n"
-        "`A9!fK2@Lm#8Q`",
-        parse_mode="Markdown",
-    )
-
-async def password(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🔐 Надішли пароль, і я підкажу чи він надійний."
-    )
-
-async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🔗 Надішли посилання для перевірки на шахрайство."
-    )
-
-# ================== ДОПОМОГА ==================
-user_help_requests = set()
-
-async def helpme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_help_requests.add(update.effective_user.id)
-    await update.message.reply_text(
-        "🆘 Опиши свою проблему **одним повідомленням**.\n"
-        "Я постараюся допомогти 👇"
-    )
-
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+# ====== КНОПКИ ======
+async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
+    user_id = update.effective_user.id
 
-    if user_id in user_help_requests:
-        user_help_requests.remove(user_id)
+    if text == "🔐 Перевірити пароль":
         await update.message.reply_text(
-            "✅ Дякую! Повідомлення отримано.\n"
-            "Ми спробуємо допомогти найближчим часом 🙌"
+            "🔐 Надішли пароль, я скажу чи він надійний."
         )
+
+    elif text == "🔗 Перевірити посилання":
+        await update.message.reply_text(
+            "🔗 Надішли посилання, я перевірю чи воно безпечне."
+        )
+
+    elif text == "🎲 Згенерувати пароль":
+        await update.message.reply_text(
+            "🎲 Ось приклад надійного пароля:\n`X9!aQ2#Lm@7F`",
+            parse_mode="Markdown",
+        )
+
+    elif text == "🛡 Поради з безпеки":
+        await update.message.reply_text(
+            "🛡 Поради:\n"
+            "• Не переходь за підозрілими посиланнями\n"
+            "• Не передавай коди\n"
+            "• Використовуй унікальні паролі"
+        )
+
+    elif text == "ℹ️ Про бота":
+        await update.message.reply_text(
+            "ℹ️ Це бот з кібербезпеки.\n"
+            "Він допомагає захистити твої дані."
+        )
+
+    elif text == "🆘 Допомога":
+        waiting_for_problem.add(user_id)
+        await update.message.reply_text(
+            "🆘 Опиши свою проблему **одним повідомленням**.\n"
+            "Я спробую допомогти 👇"
+        )
+
     else:
-        await update.message.reply_text(
-            "ℹ️ Скористайся кнопками меню або командою /help"
+        # ====== ШІ ВІДПОВІДЬ ======
+        if user_id in waiting_for_problem:
+            waiting_for_problem.remove(user_id)
+            answer = ai_answer(text)
+            await update.message.reply_text(answer)
+        else:
+            await update.message.reply_text(
+                "ℹ️ Обери дію з меню 👇"
+            )
+
+# ====== ПРОСТИЙ ШІ (локальний) ======
+def ai_answer(problem: str) -> str:
+    p = problem.lower()
+
+    if "вірус" in p or "злам" in p:
+        return (
+            "🚨 Схоже на загрозу безпеці.\n"
+            "Рекомендую:\n"
+            "• Змінити всі паролі\n"
+            "• Увімкнути 2FA\n"
+            "• Перевірити пристрій антивірусом"
         )
 
-# ================== ЗАПУСК ==================
-def main():
-    if not TOKEN:
-        raise RuntimeError("BOT_TOKEN не заданий")
+    if "посилання" in p or "сайт" in p:
+        return (
+            "🔗 Якщо посилання виглядає підозріло:\n"
+            "• Не вводь дані\n"
+            "• Перевір домен\n"
+            "• Краще не відкривати"
+        )
 
+    if "пароль" in p:
+        return (
+            "🔐 Надійний пароль має:\n"
+            "• 12+ символів\n"
+            "• Великі/малі літери\n"
+            "• Цифри та символи"
+        )
+
+    return (
+        "🤖 Я проаналізував проблему.\n"
+        "Рекомендую діяти обережно та не передавати особисті дані.\n"
+        "Якщо хочеш — уточни деталі."
+    )
+
+# ====== ЗАПУСК ======
+def main():
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("about", about))
-    app.add_handler(CommandHandler("tips", tips))
-    app.add_handler(CommandHandler("generate", generate))
-    app.add_handler(CommandHandler("password", password))
-    app.add_handler(CommandHandler("link", link))
-    app.add_handler(CommandHandler("helpme", helpme))
-
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.TEXT, handle_buttons))
 
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-
