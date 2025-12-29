@@ -1,87 +1,118 @@
 import os
+import logging
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-TOKEN = os.getenv("8596592294:AAHvoj-GVwfToT103XWOcvMMUoqE2DrkflU")
+# ---------- ЛОГИ ----------
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+
+# ---------- TOKEN ----------
+TOKEN = os.getenv("BOT_TOKEN")
 
 if not TOKEN:
-    raise RuntimeError("❌ BOT_TOKEN не встановлений")
+    raise RuntimeError("❌ BOT_TOKEN не знайдено. Додай його в Shared Variables")
 
-# ====== МЕНЮ ======
-keyboard = ReplyKeyboardMarkup(
+# ---------- КНОПКИ ----------
+MAIN_KEYBOARD = ReplyKeyboardMarkup(
     [
-        ["🔐 Перевірити пароль", "🎲 Згенерувати пароль"],
-        ["🛡 Поради", "🆘 Допомога"],
-        ["ℹ️ Про бота", "💡 Пропозиції"]
+        ["🔐 Перевірити пароль", "🔗 Перевірити посилання"],
+        ["🎲 Згенерувати пароль", "🛡 Поради з безпеки"],
+        ["ℹ️ Про бота", "🆘 Допомога"],
+        ["💡 Пропозиції"]
     ],
     resize_keyboard=True
 )
 
-# ====== /start ======
+# ---------- /start ----------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Привіт!\n"
-        "Я бот з кібербезпеки 🔐\n\n"
-        "⬇️ Обери дію з меню",
-        reply_markup=keyboard
+        "👋 Привіт!\n\n"
+        "Я бот з кібербезпеки 🔐\n"
+        "Обери дію з меню нижче ⬇️",
+        reply_markup=MAIN_KEYBOARD
     )
 
-# ====== ПОВІДОМЛЕННЯ ======
-async def messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ---------- КОМАНДИ ----------
+async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "ℹ️ Я допомагаю з:\n"
+        "• паролями\n"
+        "• фішингом\n"
+        "• порадами з безпеки"
+    )
+
+async def tips(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🛡 Поради:\n"
+        "• Не переходь по підозрілих лінках\n"
+        "• Використовуй різні паролі\n"
+        "• Увімкни 2FA"
+    )
+
+# ---------- AI ДОПОМОГА ----------
+async def help_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["help_mode"] = True
+    await update.message.reply_text(
+        "🆘 Опиши свою проблему одним повідомленням.\n"
+        "Я спробую допомогти 🤖"
+    )
+
+async def suggestions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["suggest_mode"] = True
+    await update.message.reply_text(
+        "💡 Напиши свою пропозицію для покращення бота"
+    )
+
+# ---------- ОБРОБКА ТЕКСТУ ----------
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    if text == "🔐 Перевірити пароль":
-        await update.message.reply_text("🔐 Надішли пароль для перевірки")
-        context.user_data["mode"] = "password"
-
-    elif context.user_data.get("mode") == "password":
-        context.user_data.clear()
-        if len(text) < 8:
-            await update.message.reply_text("❌ Слабкий пароль")
-        else:
-            await update.message.reply_text("✅ Пароль нормальний")
-
-    elif text == "🎲 Згенерувати пароль":
-        await update.message.reply_text("🔑 Пароль: `A9#fK2!xQ8L`", parse_mode="Markdown")
-
-    elif text == "🛡 Поради":
+    if context.user_data.get("help_mode"):
+        context.user_data["help_mode"] = False
         await update.message.reply_text(
-            "🛡 Поради:\n"
-            "• Не переходь по підозрілих лінках\n"
-            "• Використовуй 2FA\n"
-            "• Складні паролі"
+            "🤖 Я проаналізував проблему.\n"
+            "Раджу:\n"
+            "• оновити систему\n"
+            "• перевірити віруси\n"
+            "• змінити паролі"
         )
+        return
 
-    elif text == "ℹ️ Про бота":
-        await update.message.reply_text("ℹ️ Бот для допомоги з кібербезпекою")
-
-    elif text == "🆘 Допомога":
-        context.user_data["mode"] = "help"
-        await update.message.reply_text("🆘 Опиши свою проблему одним повідомленням")
-
-    elif context.user_data.get("mode") == "help":
-        context.user_data.clear()
+    if context.user_data.get("suggest_mode"):
+        context.user_data["suggest_mode"] = False
         await update.message.reply_text(
-            "🤖 Я отримав твою проблему.\n"
-            "Порада: зміни паролі, перевір пристрій, не передавай коди."
+            "✅ Дякую! Пропозицію збережено 🙌"
         )
+        return
 
-    elif text == "💡 Пропозиції":
-        context.user_data["mode"] = "idea"
-        await update.message.reply_text("💡 Напиши пропозицію для покращення бота")
+    await update.message.reply_text(
+        "ℹ️ Користуйся кнопками знизу ⬇️"
+    )
 
-    elif context.user_data.get("mode") == "idea":
-        context.user_data.clear()
-        await update.message.reply_text("✅ Дякую! Пропозицію збережено")
-
-    else:
-        await update.message.reply_text("❓ Обери дію з меню ⬇️")
-
-# ====== ЗАПУСК ======
+# ---------- MAIN ----------
 def main():
-    app = Application.builder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT, messages))
+    app.add_handler(CommandHandler("about", about))
+    app.add_handler(CommandHandler("tips", tips))
+
+    app.add_handler(MessageHandler(filters.Regex("🆘 Допомога"), help_ai))
+    app.add_handler(MessageHandler(filters.Regex("ℹ️ Про бота"), about))
+    app.add_handler(MessageHandler(filters.Regex("🛡 Поради з безпеки"), tips))
+    app.add_handler(MessageHandler(filters.Regex("💡 Пропозиції"), suggestions))
+
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
     app.run_polling()
 
 if __name__ == "__main__":
