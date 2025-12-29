@@ -6,15 +6,16 @@ TOKEN = os.getenv("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Що вміє цей бот?\n\n"
-        "Бот SecureCheck допомагає перевіряти надійність паролів, "
-        "виявляти фішингові посилання, генерувати складні паролі "
-        "та дізнаватися, як залишатися у безпеці в Інтернеті."
+        "Привіт 👋\n"
+        "Я бот і я працюю ✅"
     )
 
 def main():
     app = Application.builder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
+
+    print("Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":
