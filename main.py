@@ -18,9 +18,6 @@ from telegram.ext import (
 # =======================
 TOKEN = os.getenv("8596592294:AAHvoj-GVwfToT103XWOcvMMUoqE2DrkflU")
 
-if not TOKEN:
-    raise RuntimeError("❌ BOT_TOKEN не знайдено в Environment Variables")
-
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
