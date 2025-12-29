@@ -8,7 +8,7 @@ from telegram.ext import (
     filters,
 )
 
-TOKEN = "PASTE_YOUR_REAL_TOKEN"
+TOKEN = "8596592294:AAHvoj-GVwfToT103XWOcvMMUoqE2DrkflU"
 
 logging.basicConfig(level=logging.INFO)
 
